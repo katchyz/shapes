@@ -1,5 +1,5 @@
 ### calculating FPKM
-### Lee 2013, total RNA, 2h
+### Lee 2013, total RNA, 2h & 4h, WT
 library(GenomicAlignments)
 library(GenomicFeatures)
 library(rtracklayer)
@@ -26,7 +26,8 @@ exons_len <- exons_len[order(rownames(exons_len)),]$tx_len
 
 lee_RNA_FPKM <- (exons_RNA / exons_len) * (10^9 / read_number_mRNA)
 
-
+save(lee_RNA_FPKM, file="/Volumes/USELESS/META/SHAPES/FPKM_Lee.Rsave")
+write.csv(lee_RNA_FPKM, file="/Volumes/USELESS/META/SHAPES/FPKM_Lee.csv")
 
 # calculate on our data
 load(file = "/Volumes/USELESS/META/SHAPES/FPKM_256.Rdata")
