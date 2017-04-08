@@ -265,3 +265,25 @@ fileConn<-file("/Volumes/USELESS/META/SHAPES/codon/stop_codon/logo_tag.txt")
 writeLines(logo_tag, fileConn)
 close(fileConn)
 
+##########
+# TAA/TGA/TAG changes from 2-4cell to 256cell (TE24 vs TE256, facet on stop codon)
+
+load(file = "/Volumes/USELESS/META/SHAPES/FPKM_24.Rdata")
+load(file = "/Volumes/USELESS/META/SHAPES/FPKM_256.Rdata")
+
+TE <- data.frame(te24 = FPKM_24$exons_Ribo_fpkm / FPKM_24$exons_RNA_fpkm, te256 = FPKM_256$exons_Ribo_fpkm / FPKM_256$exons_RNA_fpkm)
+rownames(TE) <- rownames(FPKM_24)
+TE <- TE[complete.cases(TE),]
+
+te_taa <- TE[rownames(TE) %in% taa,]
+te_taa$stop_codon <- rep("taa", nrow(te_taa))
+te_tga <- TE[rownames(TE) %in% tga,]
+te_tga$stop_codon <- rep("tga", nrow(te_tga))
+te_tag <- TE[rownames(TE) %in% tag,]
+te_tag$stop_codon <- rep("tag", nrow(te_tag))
+
+te <- rbind(te_taa, te_tga, te_tag)
+
+ggplot(te, aes(x = te24, y = te256)) + geom_point() + facet_wrap(~ stop_codon) + scale_x_log10() + scale_y_log10()
+ggsave(file = "/Volumes/USELESS/META/SHAPES/stop/TE24_vs_TE256_for_TAA_TAG_TGA.png")
+

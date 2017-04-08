@@ -1,34 +1,58 @@
 ### stability
+library(GenomicFeatures)
+library(plyr)
+library(rtracklayer)
+
 mishima <- read.table(file = "/Volumes/USELESS/DATA/Mishima_2016/GSE71609_2015_MZT.txt", header = TRUE, sep = "\t")
 
 # txdb <- makeTxDbFromGFF("/Users/kasia/Downloads/mishima.gtf", format = "gtf")
-txdb <- makeTxDbFromGFF("/Users/kasia/Downloads/Danio_rerio.Zv9.74.gtf.gz", format = "gtf")
-cds <- cdsBy(txdb, by="tx", use.names=TRUE)
-fiveUTR <- fiveUTRsByTranscript(txdb, use.names=TRUE)
-threeUTR <- threeUTRsByTranscript(txdb, use.names=TRUE)
+txdb <- makeTxDbFromGFF("/Volumes/USELESS/DATA/genomes/GTF/Danio_rerio.Zv9.74.gtf.gz", format = "gtf")
+#cds <- cdsBy(txdb, by="tx", use.names=TRUE)
+#fiveUTR <- fiveUTRsByTranscript(txdb, use.names=TRUE)
+#threeUTR <- threeUTRsByTranscript(txdb, use.names=TRUE)
 
 # >10 nt 5 UTR
 # >100 nt ORF
 # >50 nt 3 UTR
 # (13471 genes)
 
-ok5 <- fiveUTR[sapply(fiveUTR, function(x){sum(width(ranges(x))) > 10})]
-ok3 <- threeUTR[names(threeUTR) %in% names(ok5)]
-ok3 <- ok3[sapply(ok3, function(x){sum(width(ranges(x))) > 50})]
-okCDS <- cds[names(cds) %in% names(ok3)]
-okCDS <- okCDS[sapply(okCDS, function(x){sum(width(ranges(x))) > 100})]
+gtf_annot <- import("/Volumes/USELESS/DATA/genomes/GTF/Danio_rerio.Zv9.74.gtf.gz", format = "gtf")
+protein_coding <- unique(gtf_annot[gtf_annot$gene_biotype == "protein_coding"]$gene_id)
+
+# otpg
+txLengths <- transcriptLengths(txdb, with.cds_len=TRUE, with.utr5_len=TRUE, with.utr3_len=TRUE)
+rownames(txLengths) <- txLengths$tx_name
+txLengths <- txLengths[order(rownames(txLengths)),]
+# get longest transcript per gene
+txlen <- arrange(txLengths, gene_id, desc(tx_len))
+txlen <- txlen[!duplicated(txlen$gene_id),]
+
+#nrow(txlen[txlen$utr5_len > 10 & txlen$cds_len > 100 & txlen$utr3_len > 50,])
+#reliableGenes <- txlen[txlen$utr5_len > 10 & txlen$cds_len > 100 & txlen$utr3_len > 50,]$gene_id
+
+nrow(txLengths[txLengths$utr5_len > 10 & txLengths$cds_len > 100 & txLengths$utr3_len > 50,])
+rg <- txLengths[txLengths$utr5_len > 10 & txLengths$cds_len > 100 & txLengths$utr3_len > 50,]$gene_id
+
+rg <- arrange(rg, gene_id, desc(tx_len))
+rg <- rg[!duplicated(rg$gene_id),] # 13525
+
+#ok5 <- fiveUTR[sapply(fiveUTR, function(x){sum(width(ranges(x))) > 10})]
+#ok3 <- threeUTR[names(threeUTR) %in% names(ok5)]
+#ok3 <- ok3[sapply(ok3, function(x){sum(width(ranges(x))) > 50})]
+#okCDS <- cds[names(cds) %in% names(ok3)]
+#okCDS <- okCDS[sapply(okCDS, function(x){sum(width(ranges(x))) > 100})]
 
 # change ENSDART to ENSDARG      # names(okCDS)
-gtp <- read.table(file = "/Users/kasia/Downloads/gtp_mishima.txt", header = FALSE, sep = "\t")
-colnames(gtp) <- c("gene", "transcript", "protein")
+#gtp <- read.table(file = "/Volumes/USELESS/DATA/genomes/gtp_mishima.txt", header = FALSE, sep = "\t")
+#colnames(gtp) <- c("gene", "transcript", "protein")
 
-gtp <- gtp[gtp$transcript %in% names(okCDS),]
+#gtp <- gtp[gtp$transcript %in% names(okCDS),]
 
-reliableGenes <- as.character.factor(unique(gtp$gene))
+#reliableGenes <- as.character.factor(unique(gtp$gene))
 
 ### RPKM cutoff
 rel <- mishima[mishima$gene_id %in% reliableGenes,]
-rel <- rel[rel$value_1 > 1,]
+rel <- rel[rel$value_1 > 1,] # 8170 (should be 8701)
 
 as.numeric.factor <- function(x) {as.numeric(levels(x))[x]}
 rel$log2.fold_change. <- as.numeric.factor(rel$log2.fold_change.)

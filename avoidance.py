@@ -160,11 +160,60 @@ for tx in fasta:
 fasta1_ctr.close()
 
 
-#######
-# run the avoidance script
-# write a wrapper, extract energies, plot
+#############
+## 5' ends of transcripts vs tRNAs
 
+mrna = open('/Volumes/USELESS/META/SHAPES/avoidance/mrna_5end.fa', 'w')
 
+for line in names_mrna:
+	tx = line.split()[0]
+	if tx in fas:
+		seq = fas[tx][0:20]
+		mrna.write("%s%s\n%s\n" % ('>', tx, seq))
 
+mrna.close()
+
+mrna_shuffled = open('/Volumes/USELESS/META/SHAPES/avoidance/mrna_shuffled_5end.fa', 'w')
+
+for line in names_mrna:
+	tx = line.split()[0]
+	if tx in fas:
+		seq = fas[tx][0:20]
+		l = [seq[i:i+2] for i in range(0, len(seq), 2)]
+		shuffle(l)
+		j = "".join(l)
+		mrna_shuffled.write("%s%s\n%s\n" % ('>', tx, j))
+
+mrna_shuffled.close()
+
+#########-----------------------------------
+## exp
+from RNAup_mRNAs_ncRNAs import *
+f1 = "mrna_5end.fa" # get cdna
+f2 = "cdhit.fa"
+#RNAup_Executer(f1,f2,(0,40))
+RNAup_Executer_Parallel(f1,f2,(0,20),32)
+## ctr
+from RNAup_mRNAs_ncRNAs import *
+f1 = "mrna_shuffled_5end.fa"
+f2 = "cdhit.fa"
+#RNAup_Executer(f1,f2,(0,40))
+RNAup_Executer_Parallel(f1,f2,(0,20),32)
+#########-----------------------------------
+
+#########-----------------------------------
+## exp
+from RNAup_mRNAs_ncRNAs import *
+f1 = "mrna_5end.fa" # get cdna
+f2 = "Danio_rerio.GRCz10.ncrna.fa"
+#RNAup_Executer(f1,f2,(0,40))
+RNAup_Executer_Parallel(f1,f2,(0,20),32)
+## ctr
+from RNAup_mRNAs_ncRNAs import *
+f1 = "mrna_shuffled_5end.fa"
+f2 = "Danio_rerio.GRCz10.ncrna.fa"
+#RNAup_Executer(f1,f2,(0,40))
+RNAup_Executer_Parallel(f1,f2,(0,20),32)
+#########-----------------------------------
 
 
