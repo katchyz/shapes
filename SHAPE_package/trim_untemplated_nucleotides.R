@@ -2,6 +2,8 @@
 
 library(GenomicAlignments)
 library(Rsamtools)
+#library(readr)
+#library(data.table)
 
 # read in BAM file (single end? paired end?)
 
@@ -13,6 +15,8 @@ bam_pairs <- readGAlignmentPairs(bam_file, use.names=TRUE, param=param)
 ### bam_pairs
 # get all concordant alignments
 bam_pairs <- bam_pairs[!is.na(seqnames(bam_pairs))]
+# get uniquely mapping reads (discard multimappers)
+bam_pairs <- bam_pairs[unique(names(bam_pairs))]
 
 ################
 # get 1st read
@@ -114,9 +118,49 @@ mcols(minus)$newend[which(idx > 1)] <-
   (mcols(minus)$offset[which(idx > 1)] - mapply(function(x,y){x[y-1]}, cs[which(idx > 1)], idx[which(idx > 1)]))
 
 
+# convert into GRanges (merges read pair)
+granges_bam_pairs <- GRanges(bam_pairs)
+# offset by 1
+off <- 1
+# sub newstart and newend for plus and minus strand
+minus_gr <- GRanges(seqnames(minus), IRanges(start(minus) - off, width = (mcols(minus)$newend - start(minus) + 1)),
+                    strand = strand(minus))
+names(minus_gr) <- names(minus)
 
-##############
-##############
+plus_gr <- GRanges(seqnames(plus), IRanges(mcols(plus)$newstart + off, width = (end(plus) - mcols(plus)$newstart + 1)),
+                   strand = strand(plus))
+names(plus_gr) <- names(plus)
+
+rt_granges <- c(minus_gr, plus_gr)
+
+# add barcodes
+barcode_file <- "/Volumes/USELESS/DATA/Shape-Seq/demo_SHAPE_package/bar.txt"
+#barcodes <- read.csv(file=barcode_file, sep="\t", header = F)
+#barcodes <- read_tsv(barcode_file, col_names = FALSE)
+barcodes <- data.table::fread(file=barcode_file, sep="\t")
+data.table::setDF(barcodes)
+colnames(barcodes) <- c("read", "barcode")
+#bar <- barcodes[barcodes$read %in% names(bam_pairs),]
+
+bar <- barcodes[barcodes$read %in% names(rt_granges),]
+rt_granges <- rt_granges[names(rt_granges) %in% bar$read]
+bar <- bar[order(match(bar$read, names(rt_granges))),]
+
+rt_granges$barcode <- bar$barcode
+
+# count unique barcodes
+rt_granges_unique <- unique(rt_granges)
+rt_granges_unique$unique_barcodes <- countOverlaps(rt_granges_unique, unique_granges(rt_granges), type="equal")
+
+###################
+## output as in summarize unique barcodes ##
+## --- pass to comp function
+
+
+###################################################################################################################
+###############################################      testing      #################################################
+###################################################################################################################
+
 bp <- c(bam_pairs[11:15], bam_pairs[194:195], bam_pairs[585:587])
 # convert into GRanges (merges read pair)
 m <- minus[11:15] 
@@ -140,9 +184,26 @@ gr$barcode <- b$barcode
 
 # count unique barcodes
 gru <- unique(gr)
-gru$unique_barcodes <- countOverlaps(gru, gr, type="equal")
+gru$unique_barcodes <- countOverlaps(gru, unique_granges(gr), type="equal")
+
+#y <- gr
+#y[10]$barcode <- factor("AAATAAA")
+#yu <- unique(y)
+#yu$unique_barcodes <- countOverlaps(yu, unique_granges(y), type="equal")
+
 
 # get TC position ??? (start for pgr, end for mgr)
+
+
+#install.packages("devtools")
+#library(devtools)
+#install_github("cnobles/gintools")
+
+
+
+
+
+
 
 
 
