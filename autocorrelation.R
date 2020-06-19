@@ -3,7 +3,8 @@ library(rtracklayer)
 library(GenomicFeatures)
 
 txdb_can <- makeTxDbFromGFF("/Volumes/USELESS/DATA/genomes/GTF/danio_rerio/zebrafish_GRCz10.gtf", format = "gtf")
-#exons <- exonsBy(txdb_can, by="tx", use.names=TRUE)
+exons <- exonsBy(txdb_can, by="tx", use.names=TRUE)
+names(exons) <- sapply(names(exons), function(x){substr(x,1,18)})
 cds <- cdsBy(txdb_can, by="tx", use.names=TRUE)
 names(cds) <- sapply(names(cds), function(x){substr(x,1,18)})
 

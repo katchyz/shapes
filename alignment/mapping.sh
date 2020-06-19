@@ -120,7 +120,7 @@ trimmed="/export/valenfs/data/raw_data/SHAPES/trimmed"
 
 #id="oblong_invivo_DMSO"
 shapes="/export/valenfs/data/raw_data/SHAPES"
-id="2-4cell_ctrl"
+id="256cell_ctrl"
 # map to transcriptome / genome
 bowtie_index='/Home/ii/katchyz/DATA/zebrafish_GRCz10/bowtie2_index/GRCz10_bowtie'
 tophat_trans='/Home/ii/katchyz/DATA/zebrafish_GRCz10/tophat2_transcriptome/Danio_rerio.GRCz10.84.chr'
@@ -154,6 +154,8 @@ summarize_unique_barcodes.sh -f <SAM_file> -b <BARCODES> -p <PRIMING_POSITION> -
 id="oblong_invivo_DMSO"
 samtools view -h -o ${id}/${id}.sam ${id}/accepted_hits.bam
 gzip ${id}/${id}.sam
+
+
 # run locally?
 
 ~/scripts/RNAprobBash-master/summarize_unique_barcodes.sh -f ${id}/${id}.sam.gz -b preproc_${id}/barcodes.txt -t -k -o summarize_${id}

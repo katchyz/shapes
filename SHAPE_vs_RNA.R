@@ -19,21 +19,23 @@ load(file="/Volumes/USELESS/META/SHAPES/FPKM_Lee.Rsave")
 lee_RNA_FPKM$n <- rownames(lee_RNA_FPKM)
 load(file="/Volumes/USELESS/META/SHAPES/FPKM_24.Rdata")
 FPKM_24 <- data.frame(cell24 = FPKM_24$exons_RNA_fpkm, n = rownames(FPKM_24))
+load(file="/Volumes/USELESS/META/SHAPES/FPKM_256.Rdata")
+FPKM_256 <- data.frame(cell256 = FPKM_256$exons_RNA_fpkm, n = rownames(FPKM_256))
 
 ######
 df_shape_cell24 <- data.frame(shape_cell24_TC.control = sapply(shape_cell24, function(x){mean(x$TC.control)}),
                               shape_cell24_TC.treated = sapply(shape_cell24, function(x){mean(x$TC.treated)}),
-                              shape_cell24_log2ratio = sapply(shape_cell24, function(x){mean(x$log2ratio)}),
+                              shape_cell24_log2ratio = sapply(shape_cell24, function(x){mean(ifelse(x$log2ratio<0, 0, x$log2ratio))}),
                               n = names(shape_cell24))
 
 df_shape_cell256 <- data.frame(shape_cell256_TC.control = sapply(shape_cell256, function(x){mean(x$TC.control)}),
                               shape_cell256_TC.treated = sapply(shape_cell256, function(x){mean(x$TC.treated)}),
-                              shape_cell256_log2ratio = sapply(shape_cell256, function(x){mean(x$log2ratio)}),
+                              shape_cell256_log2ratio = sapply(shape_cell256, function(x){mean(ifelse(x$log2ratio<0, 0, x$log2ratio))}),
                               n = names(shape_cell256))
 
 df_shape_oblong <- data.frame(shape_oblong_TC.control = sapply(shape_oblong, function(x){mean(x$TC.control)}),
                               shape_oblong_TC.treated = sapply(shape_oblong, function(x){mean(x$TC.treated)}),
-                              shape_oblong_log2ratio = sapply(shape_oblong, function(x){mean(x$log2ratio)}),
+                              shape_oblong_log2ratio = sapply(shape_oblong, function(x){mean(ifelse(x$log2ratio<0, 0, x$log2ratio))}),
                               n = names(shape_oblong))
 
 df_shape_oblong_CHX <- data.frame(shape_oblong_CHX_TC.control = sapply(shape_oblong_CHX, function(x){mean(x$TC.control)}),
@@ -64,6 +66,7 @@ df_shapes <- merge(df_shapes, df_shapes_cell1_invitro_nonsel, by="n", all=TRUE)
 df <- merge(df_shape, df_shapes, by="n", all=TRUE)
 df <- merge(df, lee_RNA_FPKM, by="n", all=TRUE)
 df <- merge(df, FPKM_24, by="n", all=TRUE)
+df <- merge(df, FPKM_256, by="n", all=TRUE)
 
 ## pick only protein-coding genes, check for correlation (why?? what happens to rRNA?)
 ## colour code by protein-coding /rRNA
@@ -98,7 +101,7 @@ p5 <- ggplot(df, aes(x = shape_cell256_TC.treated, y = h2)) + geom_point() + sca
 p6 <- ggplot(df, aes(x = shape_cell256_log2ratio, y = h2)) + geom_point() + scale_x_log10() + scale_y_log10()
 p7 <- ggplot(df, aes(x = shape_oblong_TC.control, y = h4)) + geom_point() + scale_x_log10() + scale_y_log10()
 p8 <- ggplot(df, aes(x = shape_oblong_TC.treated, y = h4)) + geom_point() + scale_x_log10() + scale_y_log10()
-p9 <- ggplot(df, aes(x = shape_cell24_log2ratio, y = h4)) + geom_point() + scale_x_log10() + scale_y_log10()
+p9 <- ggplot(df, aes(x = shape_oblong_log2ratio, y = h4)) + geom_point() + scale_x_log10() + scale_y_log10()
 p10 <- ggplot(df, aes(x = shape_oblong_CHX_TC.control, y = h4)) + geom_point() + scale_x_log10() + scale_y_log10()
 p11 <- ggplot(df, aes(x = shape_oblong_CHX_TC.treated, y = h4)) + geom_point() + scale_x_log10() + scale_y_log10()
 p12 <- ggplot(df, aes(x = shape_oblong_CHX_log2ratio, y = h4)) + geom_point() + scale_x_log10() + scale_y_log10()
@@ -135,7 +138,7 @@ ggsave(file = "/Volumes/USELESS/META/SHAPES_NEW/general/p18.png", plot = p18)
 
 #### what is this 'piggyback' cloud? - shape_cell24_TC.control
 f <- function(x) {x + 9}
-ggplot(df, aes(x = log2(shape_cell24_TC.control), y = log2(cell24))) + geom_point() + stat_function(fun = f, colour = "red")
+ggplot(df, aes(x = log2(shape_cell24_log2ratio), y = log2(cell24))) + geom_point(size=0.1) + stat_function(fun = f, colour = "red")
 
 piggyback <-df$n[log2(df$cell24) > (log2(df$shape_cell24_TC.control) + 9)]
 piggyback <- piggyback[!is.na(piggyback)]
@@ -152,6 +155,7 @@ ggsave(file = "/Volumes/USELESS/META/SHAPES_NEW/general/piggyback.png")
 ##### add GO
 go <- read.csv(file="/Users/kasia/Documents/PhD/matrix_go_fq.csv")
 go <- data.frame(n = go$X.transcript_id, go_term = go$GO_Term_Name)
+#gn <- data.frame(n = go$X.transcript_id, gene = go$gene_name)
 
 df <- merge(df, go, by="n", all=TRUE)
 go_piggyback <- subset(df, piggyback == "piggyback")$go_term # mostly "binding" ??? 'membrane', 'nucleus', 'DNA binding' --- what is the cellular component?? ---- for CONTROL
@@ -159,8 +163,8 @@ go_piggyback <- subset(df, piggyback == "piggyback")$go_term # mostly "binding" 
 ## THEORY: are these nuclear binding proteins? SHAPE read coverage is lower relative to RNA-seq, can the reagents penetrate to nucleus?
 
 #### what is this 'piggyback' cloud? - shape_cell24_TC.treated
-f <- function(x) {x + 10}
-ggplot(df, aes(x = log2(shape_cell24_TC.treated), y = log2(cell24))) + geom_point() + stat_function(fun = f, colour = "red")
+f <- function(x) {1.2*x + 12}
+ggplot(df, aes(x = log2(shape_cell24_log2ratio), y = log2(cell24))) + geom_point(size=0.1) + stat_function(fun = f, colour = "red")
 
 piggyback <-df$n[log2(df$cell24) > (log2(df$shape_cell24_TC.treated) + 10)]
 piggyback <- piggyback[!is.na(piggyback)]
@@ -168,9 +172,7 @@ piggyback <- data.frame(n = piggyback, piggyback = rep("piggyback", length(piggy
 df <- merge(df, piggyback, by="n", all=TRUE)
 
 
-ggplot(df, aes(x = log2(shape_cell24_TC.treated), y = log2(cell24))) + geom_point() + stat_function(fun = f, colour = "red") +
-  geom_point(data = subset(df, piggyback.y == 'piggyback'), aes(x=log2(shape_cell24_TC.treated), y=log2(cell24), colour=piggyback.y)) +
-  theme(legend.position="none")
+ggplot(df, aes(x = log2(shape_cell24_TC.treated), y = log2(cell24))) + geom_point(size=0.1) + stat_function(fun = f, colour = "red") + geom_point(data = subset(df, piggyback.y == 'piggyback'), aes(x=log2(shape_cell24_TC.treated), y=log2(cell24), colour=piggyback.y, size=0.1)) + theme(legend.position="none")
 ggsave(file = "/Volumes/USELESS/META/SHAPES_NEW/general/piggyback_NAI.png")
 
 go_piggyback <- subset(df, piggyback.y == "piggyback")$go_term
@@ -216,3 +218,66 @@ gor <- unlist(sapply(go_regular, function(x){strsplit(as.character(x), split=";"
 # 0.011258906                                                     0.011088685 
 # nucleic_acid_binding                                             signal_transduction 
 # 0.011033971                                                     0.009884979 
+
+
+### piggyback in common
+library(VennDiagram)
+grid.newpage()
+draw.triple.venn(area1 = length(piggyback_cell24), area2 = length(piggyback_cell256), area3 = length(piggyback_oblong), n12 = sum(piggyback_cell24 %in% piggyback_cell256), n23 = sum(piggyback_cell256 %in% piggyback_oblong), n13 = sum(piggyback_cell24 %in% piggyback_oblong), n123 = sum((piggyback_cell24[piggyback_cell24 %in% piggyback_cell256] %in% piggyback_oblong)), category = c("cell24", "cell256", "oblong"), lty = "blank", fill = c("skyblue", "pink1", "mediumorchid"))
+
+###
+write(as.character(piggyback_cell24), "/Volumes/USELESS/META/SHAPES_NEW/general/piggyback/piggyback_cell24.txt", sep="\n")
+write(as.character(piggyback_cell256), "/Volumes/USELESS/META/SHAPES_NEW/general/piggyback/piggyback_cell256.txt", sep="\n")
+write(as.character(piggyback_oblong), "/Volumes/USELESS/META/SHAPES_NEW/general/piggyback/piggyback_oblong.txt", sep="\n")
+
+###
+piggyback_cell24_gene <- go[(go$X.transcript_id %in% piggyback_cell24),]$gene_name
+piggyback_cell24_gene <- piggyback_cell24_gene[complete.cases(piggyback_cell24_gene)]
+piggyback_cell24_gene <- unique(piggyback_cell24_gene)
+write(as.character(piggyback_cell24_gene), "/Volumes/USELESS/META/SHAPES_NEW/general/piggyback/piggyback_cell24_gene.txt", sep="\n")
+
+piggyback_cell256_gene <- go[(go$X.transcript_id %in% piggyback_cell256),]$gene_name
+piggyback_cell256_gene <- piggyback_cell256_gene[complete.cases(piggyback_cell256_gene)]
+piggyback_cell256_gene <- unique(piggyback_cell256_gene)
+write(as.character(piggyback_cell256_gene), "/Volumes/USELESS/META/SHAPES_NEW/general/piggyback/piggyback_cell256_gene.txt", sep="\n")
+
+piggyback_oblong_gene <- go[(go$X.transcript_id %in% piggyback_oblong),]$gene_name
+piggyback_oblong_gene <- piggyback_oblong_gene[complete.cases(piggyback_oblong_gene)]
+piggyback_oblong_gene <- unique(piggyback_oblong_gene)
+write(as.character(piggyback_oblong_gene), "/Volumes/USELESS/META/SHAPES_NEW/general/piggyback/piggyback_oblong_gene.txt", sep="\n")
+
+piggyback_cell24 <- go[(go$X.transcript_id %in% piggyback_cell24),]$X.transcript_id
+df_cell24 <- data.frame(ensembl_ID = piggyback_cell24, gene_ID = piggyback_cell24_gene, shape = df_shape_cell24[df_shape_cell24$n %in% piggyback_cell24,]$shape_cell24_log2ratio, RNA = FPKM_24[rownames(FPKM_24) %in% piggyback_cell24,]$exons_RNA_fpkm, ribo = FPKM_24[rownames(FPKM_24) %in% piggyback_cell24,]$exons_Ribo_fpkm)
+write.csv(df_cell24, file="/Volumes/USELESS/META/SHAPES_NEW/general/piggyback/piggyback_cell24.csv")
+
+piggyback_cell256 <- go[(go$X.transcript_id %in% piggyback_cell256),]$X.transcript_id
+df_cell256 <- data.frame(ensembl_ID = piggyback_cell256, gene_ID = piggyback_cell256_gene, shape = df_shape_cell256[df_shape_cell256$n %in% piggyback_cell256,]$shape_cell256_log2ratio, RNA = FPKM_256[rownames(FPKM_256) %in% piggyback_cell256,]$exons_RNA_fpkm, ribo = FPKM_256[rownames(FPKM_256) %in% piggyback_cell256,]$exons_Ribo_fpkm)
+write.csv(df_cell256, file="/Volumes/USELESS/META/SHAPES_NEW/general/piggyback/piggyback_cell256.csv")
+
+piggyback_oblong <- go[(go$X.transcript_id %in% piggyback_oblong),]$X.transcript_id
+df_oblong <- data.frame(ensembl_ID = piggyback_oblong, gene_ID = piggyback_oblong_gene, shape = df_shape_oblong[df_shape_oblong$n %in% piggyback_oblong,]$shape_oblong_log2ratio, RNA = lee_RNA_FPKM[rownames(lee_RNA_FPKM) %in% piggyback_oblong,]$h4)
+write.csv(df_oblong, file="/Volumes/USELESS/META/SHAPES_NEW/general/piggyback/piggyback_oblong.csv")
+
+#####
+# kreska[kreska %in% piggyback_cell24]
+# [1] ENSDART00000004238 ENSDART00000006990 ENSDART00000066835 ENSDART00000084237 ENSDART00000092665 ENSDART00000108868 ENSDART00000112643
+# [8] ENSDART00000116298 ENSDART00000127270 ENSDART00000129318 ENSDART00000131791 ENSDART00000141188 ENSDART00000147811 ENSDART00000155651
+# [15] ENSDART00000155864 ENSDART00000157066 ENSDART00000157946 ENSDART00000158169 ENSDART00000158495 ENSDART00000161793 ENSDART00000162452
+# [22] ENSDART00000164938 ENSDART00000167083 ENSDART00000170095 ENSDART00000171251 ENSDART00000171837
+
+go_cc <- read.table(file = '/Volumes/USELESS/DATA/genomes/GO/go_cc.tsv', sep = '\t', header = TRUE)
+
+summary(go_cc[!(go_cc$ID %in% piggyback_cell24),])
+summary(go_cc[go_cc$ID %in% piggyback_cell24,])
+
+
+########## without 5'end
+df_shape_cell24 <- data.frame(shape_cell24_TC.treated = sapply(shape_cell24, function(x){mean(x$TC.treated[2:length(x)])}), n = names(shape_cell24))
+df_shape_cell256 <- data.frame(shape_cell256_TC.treated = sapply(shape_cell256, function(x){mean(x$TC.treated[2:length(x)])}), n = names(shape_cell256))
+
+df <- merge(df_shape_cell24, FPKM_24, by="n", all=TRUE)
+ggplot(df, aes(x = log2(shape_cell24_TC.treated), y = log2(cell24))) + geom_point(size=0.1)
+
+df <- merge(df_shape_cell256, FPKM_256, by="n", all=TRUE)
+ggplot(df, aes(x = log2(shape_cell256_TC.treated), y = log2(cell256))) + geom_point(size=0.1)
+

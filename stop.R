@@ -26,6 +26,7 @@ stop <- GRanges(Rle(rownames(txLengths), rep(1, nrow(txLengths))), IRanges(txLen
 stop <- split(stop, seqnames(stop))
 
 scale <- c(-30:30)[-31]
+scale <- c(-60:60)[-61]
 
 ### stop codon
 fasta_cds <- read.fasta("/Volumes/USELESS/DATA/fasta/danio_rerio/GRCz10/cds/Danio_rerio.GRCz10.cds.all.fa")
@@ -138,3 +139,235 @@ ggplot(df_oblong, aes(x=scale, y=oblong_tga)) + geom_bar(stat = "identity") + gg
 ggsave(file = "/Volumes/USELESS/META/SHAPES_NEW/stop/common_oblong_tga.png")
 ggplot(df_oblong, aes(x=scale, y=oblong_tag)) + geom_bar(stat = "identity") + ggtitle("STOP, oblong, TAG")
 ggsave(file = "/Volumes/USELESS/META/SHAPES_NEW/stop/common_oblong_tag.png")
+
+
+
+
+###### libs
+shape_libs <- c("shape_cell1", "shape_cell24", "shape_cell256", "shape_cell1K", "shape_oblong", "shape_oblong_CHX")
+#shapes_libs <- c("shapes_cell1_invitro", "shapes_cell1_invitro_nonsel", "shapes_cell24")
+
+
+###############
+############# new data
+for (i in 1:8) {
+  
+  u <- unlist(eval(parse(text = shape_libs[i])))
+  u$log2ratio[u$log2ratio < 0] <- 0
+  meta <- subsetByOverlaps(u, stop, ignore.strand=TRUE)
+  meta <- split(meta, seqnames(meta))
+  meta <- meta[sapply(meta, function(x){length(x) > 0})]
+  meta <- meta[sapply(meta, function(x){sum(x$log2ratio) > 0})]
+  
+  assign(paste0("var",i), names(meta))
+  sub_taa <- meta[names(meta) %in% taa]
+  sub_tga <- meta[names(meta) %in% tga]
+  sub_tag <- meta[names(meta) %in% tag]
+  d <- data.frame(scale = scale,
+                  taa = Reduce("+", lapply(sub_taa, function(x){x$log2ratio/sum(x$log2ratio)})),
+                  tga = Reduce("+", lapply(sub_tga, function(x){x$log2ratio/sum(x$log2ratio)})),
+                  tag = Reduce("+", lapply(sub_tag, function(x){x$log2ratio/sum(x$log2ratio)})))
+  
+  ggplot(d, aes(x = scale, y = taa)) + geom_bar(stat = "identity") + ggtitle(paste(shape_libs[i], "STOP, TAA"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/p_taa", i, ".png", collapse = NULL)
+  ggsave(fp)
+  ggplot(d, aes(x = scale, y = tga)) + geom_bar(stat = "identity") + ggtitle(paste(shape_libs[i], "STOP, TGA"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/p_tga", i, ".png", collapse = NULL)
+  ggsave(fp)
+  ggplot(d, aes(x = scale, y = tag)) + geom_bar(stat = "identity") + ggtitle(paste(shape_libs[i], "STOP, TAG"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/p_tag", i, ".png", collapse = NULL)
+  ggsave(fp)
+  
+}
+
+
+for (i in 1:3) {
+  
+  u <- unlist(eval(parse(text = shapes_libs[i])))
+  meta <- subsetByOverlaps(u, stop, ignore.strand=TRUE)
+  meta <- split(meta, seqnames(meta))
+  meta <- meta[sapply(meta, function(x){length(x) > 0})]
+  meta <- meta[sapply(meta, function(x){sum(x$TC) > 0})]
+  
+  assign(paste0("svar",i), names(meta))
+  sub_taa <- meta[names(meta) %in% taa]
+  sub_tga <- meta[names(meta) %in% tga]
+  sub_tag <- meta[names(meta) %in% tag]
+  d <- data.frame(scale = scale,
+                  taa = Reduce("+", lapply(sub_taa, function(x){x$TC/sum(x$TC)})),
+                  tga = Reduce("+", lapply(sub_tga, function(x){x$TC/sum(x$TC)})),
+                  tag = Reduce("+", lapply(sub_tag, function(x){x$TC/sum(x$TC)})))
+  
+  ggplot(d, aes(x = scale, y = taa)) + geom_bar(stat = "identity") + ggtitle(paste(shapes_libs[i], "STOP, TAA"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/s_taa", i, ".png", collapse = NULL)
+  ggsave(fp)
+  ggplot(d, aes(x = scale, y = tga)) + geom_bar(stat = "identity") + ggtitle(paste(shapes_libs[i], "STOP, TGA"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/s_tga", i, ".png", collapse = NULL)
+  ggsave(fp)
+  ggplot(d, aes(x = scale, y = tag)) + geom_bar(stat = "identity") + ggtitle(paste(shapes_libs[i], "STOP, TAG"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/s_tag", i, ".png", collapse = NULL)
+  ggsave(fp)
+  
+}
+
+
+### convert p_taa* +append taa.png
+### convert p_tga* +append tga.png
+### convert p_tag* +append tag.png
+### convert taa.png tga.png tag.png -append stop_shape.png
+
+### convert s_taa* +append staa.png
+### convert s_tga* +append stga.png
+### convert s_tag* +append stag.png
+### convert staa.png stga.png stag.png -append stop_shapes.png
+
+
+### get tx in common
+common <- var1[var1 %in% var2]
+common <- common[common %in% var3]
+common <- common[common %in% var4]
+common <- common[common %in% var5]
+common <- common[common %in% var6]
+common <- common[common %in% var7]
+common <- common[common %in% var8]
+### 281 genes 
+
+commons <- svar1[svar1 %in% svar2]
+commons <- commons[commons %in% svar3]
+### 1059 genes
+
+
+for (i in 1:8) {
+  
+  u <- unlist(eval(parse(text = shape_libs[i])))
+  u$log2ratio[u$log2ratio < 0] <- 0
+  meta <- subsetByOverlaps(u, stop, ignore.strand=TRUE)
+  meta <- split(meta, seqnames(meta))
+  meta <- meta[names(meta) %in% common]
+  meta <- meta[sapply(meta, function(x){sum(x$log2ratio) > 0})]
+  
+  sub_taa <- meta[names(meta) %in% taa]
+  sub_tga <- meta[names(meta) %in% tga]
+  sub_tag <- meta[names(meta) %in% tag]
+  d <- data.frame(scale = scale,
+                  taa = Reduce("+", lapply(sub_taa, function(x){x$log2ratio/sum(x$log2ratio)})),
+                  tga = Reduce("+", lapply(sub_tga, function(x){x$log2ratio/sum(x$log2ratio)})),
+                  tag = Reduce("+", lapply(sub_tag, function(x){x$log2ratio/sum(x$log2ratio)})))
+  
+  ggplot(d, aes(x = scale, y = taa)) + geom_bar(stat = "identity") + ggtitle(paste(shape_libs[i], "STOP, TAA, common"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/common_p_taa", i, ".png", collapse = NULL)
+  ggsave(fp)
+  ggplot(d, aes(x = scale, y = tga)) + geom_bar(stat = "identity") + ggtitle(paste(shape_libs[i], "STOP, TGA, common"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/common_p_tga", i, ".png", collapse = NULL)
+  ggsave(fp)
+  ggplot(d, aes(x = scale, y = tag)) + geom_bar(stat = "identity") + ggtitle(paste(shape_libs[i], "STOP, TAG, common"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/common_p_tag", i, ".png", collapse = NULL)
+  ggsave(fp)
+  
+}
+
+for (i in 1:3) {
+  
+  u <- unlist(eval(parse(text = shapes_libs[i])))
+  meta <- subsetByOverlaps(u, stop, ignore.strand=TRUE)
+  meta <- split(meta, seqnames(meta))
+  meta <- meta[names(meta) %in% commons]
+  meta <- meta[sapply(meta, function(x){sum(x$TC) > 0})]
+  
+  sub_taa <- meta[names(meta) %in% taa]
+  sub_tga <- meta[names(meta) %in% tga]
+  sub_tag <- meta[names(meta) %in% tag]
+  d <- data.frame(scale = scale,
+                  taa = Reduce("+", lapply(sub_taa, function(x){x$TC/sum(x$TC)})),
+                  tga = Reduce("+", lapply(sub_tga, function(x){x$TC/sum(x$TC)})),
+                  tag = Reduce("+", lapply(sub_tag, function(x){x$TC/sum(x$TC)})))
+  
+  ggplot(d, aes(x = scale, y = taa)) + geom_bar(stat = "identity") + ggtitle(paste(shapes_libs[i], "STOP, TAA, common"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/common_s_taa", i, ".png", collapse = NULL)
+  ggsave(fp)
+  ggplot(d, aes(x = scale, y = tga)) + geom_bar(stat = "identity") + ggtitle(paste(shapes_libs[i], "STOP, TGA, common"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/common_s_tga", i, ".png", collapse = NULL)
+  ggsave(fp)
+  ggplot(d, aes(x = scale, y = tag)) + geom_bar(stat = "identity") + ggtitle(paste(shapes_libs[i], "STOP, TAG, common"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/common_s_tag", i, ".png", collapse = NULL)
+  ggsave(fp)
+  
+}
+
+
+# convert common_p_taa* +append common_taa.png
+# convert common_p_tga* +append common_tga.png
+# convert common_p_tag* +append common_tag.png
+# convert common_taa.png common_tga.png common_tag.png -append stop_shape_common.png
+
+# convert common_s_taa* +append commons_taa.png
+# convert common_s_tga* +append commons_tga.png
+# convert common_s_tag* +append commons_tag.png
+# convert commons_taa.png commons_tga.png commons_tag.png -append stop_shapes_common.png
+
+
+
+
+###### control and treated
+
+for (i in 1:6) {
+  
+  u <- unlist(eval(parse(text = shape_libs[i])))
+  meta <- subsetByOverlaps(u, stop, ignore.strand=TRUE)
+  meta <- split(meta, seqnames(meta))
+  meta <- meta[sapply(meta, function(x){length(x) > 0})]
+  meta <- meta[sapply(meta, function(x){sum(x$TC.control) > 0})]
+  
+  assign(paste0("var",i), names(meta))
+  sub_taa <- meta[names(meta) %in% taa]
+  sub_tga <- meta[names(meta) %in% tga]
+  sub_tag <- meta[names(meta) %in% tag]
+  d <- data.frame(scale = scale,
+                  taa = Reduce("+", lapply(sub_taa, function(x){x$TC.control/sum(x$TC.control)})),
+                  tga = Reduce("+", lapply(sub_tga, function(x){x$TC.control/sum(x$TC.control)})),
+                  tag = Reduce("+", lapply(sub_tag, function(x){x$TC.control/sum(x$TC.control)})))
+  
+  ggplot(d, aes(x = scale, y = taa)) + geom_bar(stat = "identity") + ggtitle(paste(shape_libs[i], "STOP, TAA, ctr"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/long/control/p_taa", i, ".png", collapse = NULL)
+  ggsave(fp)
+  ggplot(d, aes(x = scale, y = tga)) + geom_bar(stat = "identity") + ggtitle(paste(shape_libs[i], "STOP, TGA, ctr"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/long/control/p_tga", i, ".png", collapse = NULL)
+  ggsave(fp)
+  ggplot(d, aes(x = scale, y = tag)) + geom_bar(stat = "identity") + ggtitle(paste(shape_libs[i], "STOP, TAG, ctr"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/long/control/p_tag", i, ".png", collapse = NULL)
+  ggsave(fp)
+  
+}
+
+
+
+
+for (i in 1:6) {
+  
+  u <- unlist(eval(parse(text = shape_libs[i])))
+  meta <- subsetByOverlaps(u, stop, ignore.strand=TRUE)
+  meta <- split(meta, seqnames(meta))
+  meta <- meta[sapply(meta, function(x){length(x) > 0})]
+  meta <- meta[sapply(meta, function(x){sum(x$TC.treated) > 0})]
+  
+  assign(paste0("var",i), names(meta))
+  sub_taa <- meta[names(meta) %in% taa]
+  sub_tga <- meta[names(meta) %in% tga]
+  sub_tag <- meta[names(meta) %in% tag]
+  d <- data.frame(scale = scale,
+                  taa = Reduce("+", lapply(sub_taa, function(x){x$TC.treated/sum(x$TC.treated)})),
+                  tga = Reduce("+", lapply(sub_tga, function(x){x$TC.treated/sum(x$TC.treated)})),
+                  tag = Reduce("+", lapply(sub_tag, function(x){x$TC.treated/sum(x$TC.treated)})))
+  
+  ggplot(d, aes(x = scale, y = taa)) + geom_bar(stat = "identity") + ggtitle(paste(shape_libs[i], "STOP, TAA, tre"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/long/treated/p_taa", i, ".png", collapse = NULL)
+  ggsave(fp)
+  ggplot(d, aes(x = scale, y = tga)) + geom_bar(stat = "identity") + ggtitle(paste(shape_libs[i], "STOP, TGA, tre"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/long/treated/p_tga", i, ".png", collapse = NULL)
+  ggsave(fp)
+  ggplot(d, aes(x = scale, y = tag)) + geom_bar(stat = "identity") + ggtitle(paste(shape_libs[i], "STOP, TAG, tre"))
+  fp <- paste0("/Volumes/USELESS/META/SHAPES_NEW/stop/long/treated/p_tag", i, ".png", collapse = NULL)
+  ggsave(fp)
+  
+}
+
